@@ -48,9 +48,6 @@ services:
   e-learning:
     image: docker.io/bitnami/moodle:4.3.0
     container_name: e-learning
-    ports:
-      - '80:8080'
-      - '443:8443'
     environment:
       - MOODLE_USERNAME=$MOODLE_USERNAME
       - MOODLE_PASSWORD=$MOODLE_PASSWORD
