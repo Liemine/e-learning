@@ -3,7 +3,7 @@ version: "3.9"
 services:
   reverse-proxy:
       image: traefik:v2.10.5
-      container_name: traefik
+      container_name: reverse-proxy
       ports:
         - "80:80"
         - "443:443"
@@ -32,15 +32,48 @@ services:
         - "traefik.http.routers.dashboard.middlewares=authtraefik"
         - "traefik.http.middlewares.authtraefik.basicauth.users=user:$2a$13$1cSrKi/NVaYz5mE8ekhmrOLBRsCoQtaN3Ai42hZPdbibScRJi631a" # https://www.transip.nl/htpasswd/
       restart: always
+  e-learning-db:
+    image: docker.io/bitnami/mariadb:10.6
+    container_name: e-learning-db
+    environment:
+      - MARIADB_USER=$MOODLE_DATABASE_USER
+      - MARIADB_ROOT_PASSWORD=$MOODLE_DATABASE_PASSWORD
+      - MARIADB_PASSWORD=$MOODLE_DATABASE_PASSWORD
+      - MARIADB_DATABASE=$MOODLE_DATABASE_NAME
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+    volumes:
+      - 'mariadb_data:/bitnami/mariadb'
 
   e-learning:
-    image: nginx:latest
+    image: docker.io/bitnami/moodle:4.3.0
     container_name: e-learning
+    ports:
+      - '80:8080'
+      - '443:8443'
+    environment:
+      - MOODLE_USERNAME=$MOODLE_USERNAME
+      - MOODLE_PASSWORD=$MOODLE_PASSWORD
+      - MOODLE_EMAIL=$MOODLE_EMAIL
+      - MOODLE_DATABASE_HOST=e-learning-db
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=$MOODLE_DATABASE_USER
+      - MOODLE_DATABASE_NAME=$MOODLE_DATABASE_NAME
+      - MOODLE_DATABASE_PASSWORD=$MOODLE_DATABASE_PASSWORD
     volumes:
-      - ./nginx/html:/usr/share/nginx/html
+      - 'moodle_data:/bitnami/moodle'
+      - 'moodledata_data:/bitnami/moodledata'
+    depends_on:
+      - e-learning-db
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.e-learning-https.rule=Host(`e-learning.glamorouscolors.nl`)"
       - "traefik.http.routers.e-learning-https.entrypoints=websecure"
       - "traefik.http.routers.e-learning-https.tls.certresolver=myresolver"
-    restart: always
+volumes:
+  mariadb_data:
+    driver: local
+  moodle_data:
+    driver: local
+  moodledata_data:
+    driver: local
